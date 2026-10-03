@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claim Checker</title>
+
+  <!-- Google Fonts: Space Grotesk (headings) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ---------- Colors in one place: change these to re-theme the whole page ---------- */
+    :root {
+      --bg: #0b0d17;
+      --text: #e8eaf6;
+      --muted: #8b90a8;
+      --accent1: #7c5cff;
+      --accent2: #00d4ff;
+      --green: #2ecc8f;
+      --red: #ff5c7a;
+      --grey: #8b90a8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", Arial, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ---------- Floating glowing background blobs ---------- */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.35;
+      z-index: -1;
+      animation: float 14s ease-in-out infinite;
+    }
+    .blob.one { width: 380px; height: 380px; background: var(--accent1); top: -80px; left: -80px; }
+    .blob.two { width: 340px; height: 340px; background: var(--accent2); bottom: -80px; right: -60px; animation-delay: -7s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50%      { transform: translate(40px, 30px); }
+    }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 48px 18px 60px; }
+
+    /* ---------- Title with moving gradient ---------- */
+    h1 {
+      font-family: "Space Grotesk", Arial, sans-serif;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      margin: 0 0 8px;
+      background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent1));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: shine 6s linear infinite;
+    }
+    @keyframes shine { to { background-position: 200% center; } }
+
+    .subtitle { color: var(--muted); margin: 0 0 28px; line-height: 1.6; }
+
+    /* ---------- Glass panel ---------- */
+    .panel {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    textarea {
+      width: 100%;
+      height: 160px;
+      resize: vertical;
+      background: rgba(0, 0, 0, 0.25);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 14px;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    textarea:focus {
+      border-color: var(--accent1);
+      box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.25);
+    }
+    textarea::placeholder { color: #5d627a; }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .counter { margin-left: auto; color: var(--muted); font-size: 13px; }
+
+    /* ---------- Buttons ---------- */
+    button {
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 22px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+    #checkBtn {
+      color: white;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    }
+    #checkBtn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(124, 92, 255, 0.45);
+    }
+    #checkBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #exampleBtn {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    #exampleBtn:hover { background: rgba(255, 255, 255, 0.14); }
+
+    /* ---------- Loader: three bouncing dots ---------- */
+    .loader { display: none; align-items: center; gap: 12px; margin-top: 22px; color: var(--muted); }
+    .loader.show { display: flex; }
+    .dots span {
+      display: inline-block;
+      width: 10px; height: 10px;
+      margin-right: 5px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.15s; }
+    .dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+      40%           { transform: translateY(-10px); opacity: 1; }
+    }
+
+    .status { margin-top: 18px; min-height: 22px; color: var(--muted); }
+    .status.error { color: var(--red); }
+
+    /* ---------- Result cards ---------- */
+    .card {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-left-width: 5px;
+      animation: fadeUp 0.6s ease both;   /* "both" keeps cards hidden until their delay ends */
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+    .card.SUPPORTED       { border-left-color: var(--green); }
+    .card.CONTRADICTED    { border-left-color: var(--red); }
+    .card.NOT_ENOUGH_INFO { border-left-color: var(--grey); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0b0d17;
+    }
+    .badge.SUPPORTED       { background: var(--green); }
+    .badge.CONTRADICTED    { background: var(--red); }
+    .badge.NOT_ENOUGH_INFO { background: var(--grey); }
+
+    .claim {
+      font-family: "Space Grotesk", Arial, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin: 12px 0 8px;
+      line-height: 1.4;
+    }
+    .explanation { color: #c3c7dc; line-height: 1.6; margin: 0 0 10px; }
+    .source { color: var(--accent2); text-decoration: none; font-size: 14px; }
+    .source:hover { text-decoration: underline; }
+
+    .note { color: var(--muted); font-size: 13px; line-height: 1.6; margin-top: 32px; }
+
+    /* Accessibility: turn off animations for people who prefer less motion */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="blob one"></div>
+  <div class="blob two"></div>
+
+  <div class="container">
+    <h1>Claim Checker</h1>
+    <p class="subtitle">
+      Paste some text. The app pulls out factual claims and checks each one against Wikipedia, with sources.
+    </p>
+
+    <div class="panel">
+      <textarea id="inputText" maxlength="3000"
+        placeholder="Example: The Eiffel Tower is located in Berlin and was completed in 1889."></textarea>
+
+      <div class="row">
+        <button id="checkBtn">Check claims</button>
+        <button id="exampleBtn" type="button">Try an example</button>
+        <span class="counter" id="counter">0 / 3000</span>
+      </div>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <span>Extracting claims and searching Wikipedia... this can take 10-20 seconds.</span>
+    </div>
+
+    <p class="status" id="status" aria-live="polite"></p>
+    <div id="results"></div>
+
+    <p class="note">
+      Verdicts come from an AI reading Wikipedia article introductions. They can be wrong or incomplete,
+      so treat them as a starting point, not the final truth.
+    </p>
+  </div>
+
+  <script>
+    const inputEl = document.getElementById("inputText");
+    const counterEl = document.getElementById("counter");
+    const checkBtn = document.getElementById("checkBtn");
+    const exampleBtn = document.getElementById("exampleBtn");
+    const loaderEl = document.getElementById("loader");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+
+    // Icon + readable label for each verdict
+    const VERDICT_INFO = {
+      SUPPORTED:       { icon: "✅", label: "Supported" },
+      CONTRADICTED:    { icon: "❌", label: "Contradicted" },
+      NOT_ENOUGH_INFO: { icon: "❓", label: "Not enough info" },
+    };
+
+    // Update the "123 / 3000" counter
+    function updateCounter() {
+      counterEl.textContent = inputEl.value.length + " / 3000";
+    }
+    inputEl.addEventListener("input", updateCounter);
+
+    // "Try an example" button fills the textarea
+    exampleBtn.addEventListener("click", () => {
+      inputEl.value =
+        "The Eiffel Tower is located in Berlin and was completed in 1889. " +
+        "Mount Everest is the tallest mountain above sea level.";
+      updateCounter();
+    });
+
+    checkBtn.addEventListener("click", async () => {
+      resultsEl.innerHTML = "";
+      statusEl.textContent = "";
+      statusEl.className = "status";
+      loaderEl.classList.add("show");
+      checkBtn.disabled = true;
+
+      try {
+        // Send the text to our FastAPI backend (same as before)
+        const response = await fetch("/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: inputEl.value }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.className = "status error";
+          statusEl.textContent = "Error: " + data.detail;
+          return;
+        }
+
+        if (data.results.length === 0) {
+          statusEl.textContent = "No checkable factual claims were found in that text.";
+          return;
+        }
+
+        // Build one card per claim
+        data.results.forEach((item, index) => {
+          const info = VERDICT_INFO[item.verdict] || VERDICT_INFO.NOT_ENOUGH_INFO;
+
+          const card = document.createElement("div");
+          card.className = "card " + item.verdict;
+          // Each card starts a little later than the previous one (staggered animation)
+          card.style.animationDelay = index * 0.2 + "s";
+
+          const badge = document.createElement("span");
+          badge.className = "badge " + item.verdict;
+          badge.textContent = info.icon + " " + info.label;
+
+          const claim = document.createElement("p");
+          claim.className = "claim";
+          claim.textContent = item.claim;
+
+          const explanation = document.createElement("p");
+          explanation.className = "explanation";
+          explanation.textContent = item.explanation;
+
+          card.appendChild(badge);
+          card.appendChild(claim);
+          card.appendChild(explanation);
+
+          if (item.source) {
+            const link = document.createElement("a");
+            link.className = "source";
+            link.href = item.source.url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = "Source: " + item.source.title + " (Wikipedia) ↗";
+            card.appendChild(link);
+          }
+
+          resultsEl.appendChild(card);
+        });
+      } catch (error) {
+        statusEl.className = "status error";
+        statusEl.textContent = "Could not reach the server. Is it running?";
+      } finally {
+        loaderEl.classList.remove("show");
+        checkBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
