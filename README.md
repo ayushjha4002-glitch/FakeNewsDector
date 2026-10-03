@@ -180,7 +180,7 @@ Claim Checker pushes further on the question *"how do you make an LLM's output t
 
 Built by **Ayush**, student preparing for AI and software engineering roles.
 
-- LinkedIn: [your-linkedin-url](https://www.linkedin.com/in/YOUR-PROFILE)
-- GitHub: [@YOUR-USERNAME](https://github.com/YOUR-USERNAME)
+- LinkedIn: linkedin.com/in/ayush-jha-68831231a/
+- GitHub: https://github.com/ayushjha4002-glitch
 
 If you found this useful, a ⭐ on the repo is appreciated, and feedback is welcome in the issues tab.
